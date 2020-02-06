@@ -1,9 +1,15 @@
 import { grpc } from '@improbable-eng/grpc-web'
 import { Config } from '@textile/threads-client'
+import axios, { AxiosRequestConfig } from 'axios'
 
 /**
  * WriteTransaction performs a mutating bulk transaction on the underlying store.
  */
+
+type Session = {
+  id: string
+  session_id: string
+}
 export class ThreadsConfig extends Config {
   constructor(
     public token: string,
@@ -21,22 +27,26 @@ export class ThreadsConfig extends Config {
     await this.refreshSession()
   }
   get sessionAPI(): string {
-    return `${this.apiScheme}://${this.api}:${this.sessionPort}/register`
+    return `${this.apiScheme}://${this.api}:${this.sessionPort}`
   }
   private async refreshSession() {
-    const payload: RequestInit = {
-      method: 'post',
-      body: JSON.stringify({
+    const setup: AxiosRequestConfig = {
+      baseURL: this.sessionAPI,
+      responseType: 'json',
+    }
+    const apiClient = axios.create(setup)
+
+    const resp = await apiClient.post<Session>(
+      '/register',
+      JSON.stringify({
         token: this.token,
         device_id: this.deviceId,
       }),
+    )
+    if (resp.status !== 200) {
+      new Error(resp.statusText)
     }
-    const resp = await fetch(this.sessionAPI, payload)
-    if (resp.status === 200) {
-      const data = await resp.json()
-      console.log(data)
-    }
-    new Error(resp.statusText)
+    this.session = resp.data.session_id
   }
   _wrapMetadata(values?: { [key: string]: any }): { [key: string]: any } | undefined {
     return super._wrapMetadata(values)

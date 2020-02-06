@@ -53,6 +53,10 @@ export class API {
         );
   }
 
+  async start() {
+    this._threadsConfig.start()
+  }
+
   get threadsClient(): Client {
     if (!this._threadsClient) {
       this._threadsClient = new Client(this._threadsConfig)
